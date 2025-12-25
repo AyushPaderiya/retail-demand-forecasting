@@ -1,0 +1,133 @@
+# Project Configuration
+project:
+  name: "Retail Demand Forecasting"
+  version: "1.0.0"
+  description: "Enterprise-grade end-to-end retail demand forecasting system"
+
+# Data Generation Configuration
+data_generation:
+  seed: 42
+  start_date: "2022-01-01"
+  end_date: "2024-12-31"
+  chunk_size: 50000
+  output_dir: "artifacts/data"
+  
+  stores:
+    count: 50
+    regions: ["North", "South", "East", "West", "Central"]
+    formats: ["Supermarket", "Hypermarket", "Express", "Online"]
+  
+  products:
+    count: 1000
+    categories: 50
+    subcategories: 200
+    brands: 100
+  
+  sales:
+    avg_transactions_per_store_per_day: 90
+    max_total_rows: 5000000
+    quantity_range: [1, 10]
+  
+  customers:
+    count: 50000
+    segments: ["Regular", "Premium", "VIP", "New", "Inactive"]
+  
+  promotions:
+    avg_promotions_per_month: 200
+    discount_range: [5, 50]
+
+# Database Configuration
+database:
+  host: "localhost"
+  port: 5432
+  name: "retail_forecast"
+  user: "postgres"
+  password: "postgres"
+  pool_size: 5
+  max_overflow: 10
+
+# Feature Engineering Configuration
+feature_engineering:
+  lag_features: [7, 14, 30]
+  rolling_windows: [7, 14, 30]
+  rolling_functions: ["mean", "std", "min", "max"]
+
+# Model Configuration
+modeling:
+  test_size: 0.2
+  random_state: 42
+  cv_folds: 5
+  forecast_horizons: [7, 14, 30]
+  
+  models:
+    - name: "LinearRegression"
+      enabled: true
+      params: {}
+    - name: "Ridge"
+      enabled: true
+      params:
+        alpha: 1.0
+    - name: "Lasso"
+      enabled: true
+      params:
+        alpha: 0.1
+    - name: "RandomForest"
+      enabled: true
+      params:
+        n_estimators: 100
+        max_depth: 10
+        random_state: 42
+    - name: "GradientBoosting"
+      enabled: true
+      params:
+        n_estimators: 100
+        max_depth: 5
+        random_state: 42
+    - name: "XGBoost"
+      enabled: true
+      params:
+        n_estimators: 100
+        max_depth: 6
+        learning_rate: 0.1
+        random_state: 42
+    - name: "LightGBM"
+      enabled: true
+      params:
+        n_estimators: 100
+        max_depth: 6
+        learning_rate: 0.1
+        random_state: 42
+    - name: "CatBoost"
+      enabled: true
+      params:
+        iterations: 100
+        depth: 6
+        learning_rate: 0.1
+        random_state: 42
+        verbose: false
+
+# Evaluation Metrics
+evaluation:
+  metrics: ["rmse", "mae", "mape", "r2", "forecast_bias"]
+  primary_metric: "rmse"
+
+# Flask API Configuration
+api:
+  host: "0.0.0.0"
+  port: 5000
+  debug: false
+  target_latency_ms: 500
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  log_dir: "artifacts/logs"
+  log_file: "application.log"
+
+# Artifacts Configuration
+artifacts:
+  base_dir: "artifacts"
+  data_dir: "artifacts/data"
+  models_dir: "artifacts/models"
+  logs_dir: "artifacts/logs"
