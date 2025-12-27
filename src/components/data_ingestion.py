@@ -83,7 +83,11 @@ class DataIngestion:
         """Load customers data."""
         path = Path(self.config.data_dir) / "customers.csv"
         df = self._load_csv(path, "customers")
-        df["first_purchase_date"] = pd.to_datetime(df["first_purchase_date"])
+        # Handle both possible column names
+        if "first_purchase_date" in df.columns:
+            df["first_purchase_date"] = pd.to_datetime(df["first_purchase_date"])
+        elif "registration_date" in df.columns:
+            df["registration_date"] = pd.to_datetime(df["registration_date"])
         return df
     
     def load_sales(
