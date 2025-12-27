@@ -1,0 +1,12 @@
+{
+    "best_model": "randomforest",
+    "models_trained": [
+        "LinearRegression",
+        "Ridge",
+        "Lasso",
+        "RandomForest",
+        "CatBoost",
+        "XGBoost",
+        "LightGBM"
+    ]
+}

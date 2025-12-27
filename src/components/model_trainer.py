@@ -413,6 +413,19 @@ class ModelTrainer:
                 json.dump(self.feature_names, f)
             saved_paths["feature_names"] = str(features_path)
         
+        # Save best model metadata for prediction pipeline
+        if self.best_model_name:
+            import json
+            metadata_path = Path(self.config.models_dir) / "model_metadata.json"
+            metadata = {
+                "best_model": self.best_model_name.lower(),
+                "models_trained": list(self.training_results.keys()),
+            }
+            with open(metadata_path, "w") as f:
+                json.dump(metadata, f, indent=2)
+            saved_paths["model_metadata"] = str(metadata_path)
+            self.logger.info(f"Saved model metadata: best_model={self.best_model_name}")
+        
         self.logger.info(f"Saved {len(saved_paths)} artifacts to {self.config.models_dir}")
         
         return saved_paths

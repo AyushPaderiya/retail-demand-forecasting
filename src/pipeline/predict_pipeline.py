@@ -62,6 +62,16 @@ class PredictionPipeline:
         try:
             models_dir = Path(self.config.models_dir)
             
+            # Load model metadata first to get the best model name
+            import json
+            metadata_path = models_dir / "model_metadata.json"
+            if metadata_path.exists():
+                with open(metadata_path, "r") as f:
+                    metadata = json.load(f)
+                    # Update default_model from saved metadata
+                    self.config.default_model = metadata.get("best_model", self.config.default_model)
+                    self.logger.info(f"Loaded model metadata: best_model={self.config.default_model}")
+            
             # Load model
             model_path = models_dir / f"{self.config.default_model}_model.joblib"
             if model_path.exists():
@@ -72,7 +82,9 @@ class PredictionPipeline:
                 model_files = list(models_dir.glob("*_model.joblib"))
                 if model_files:
                     self.model = load_object(str(model_files[0]))
-                    self.logger.info(f"Loaded model: {model_files[0].stem}")
+                    # Update default_model to reflect the actual loaded model
+                    self.config.default_model = model_files[0].stem.replace("_model", "")
+                    self.logger.info(f"Loaded model: {self.config.default_model}")
                 else:
                     self.logger.warning("No trained model found")
             
@@ -87,7 +99,6 @@ class PredictionPipeline:
                 self.label_encoders = load_object(str(encoders_path))
             
             # Load feature names
-            import json
             features_path = models_dir / "feature_names.json"
             if features_path.exists():
                 with open(features_path, "r") as f:
