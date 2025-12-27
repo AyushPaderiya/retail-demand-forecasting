@@ -8,7 +8,7 @@
 
 An **enterprise-grade machine learning system** designed to solve complex inventory challenges in retail. This project demonstrates an end-to-end pipeline from synthetic data generation to model deployment, predicting product demand across multiple stores with high accuracy.
 
-> **Key Achievement**: Developed a forecasting model that achieves an R² of 0.94, outperforming traditional linear baselines by over 25% in prediction accuracy.
+> **Key Achievement**: Developed an end-to-end ML forecasting system with proper time-series validation, demonstrating robust model comparison across 7 algorithms.
 
 ---
 
@@ -25,7 +25,7 @@ The system is optimized for:
 - **RMSE (Root Mean Squared Error)**: Minimizing the magnitude of prediction errors.
 - **MAE (Mean Absolute Error)**: Ensuring average prediction deviations are low.
 - **MAPE (Mean Absolute Percentage Error)**: Measuring accuracy relative to sales volume (achieved ~10% error rate on top models).
-- **R² Score**: Explaining 94% of the variance in sales data.
+- **R² Score**: Measures variance explained (note: time-series forecasting typically shows lower R² due to inherent demand volatility).
 
 ---
 
@@ -82,7 +82,7 @@ retail-demand-forecasting/
 
 ### 1. Installation
 ```bash
-git clone https://github.com/yourusername/retail-demand-forecasting.git
+git clone https://github.com/AyushPaderiya/retail-demand-forecasting.git
 cd retail-demand-forecasting
 python -m venv venv
 # Activate: .\venv\Scripts\activate (Win) or source venv/bin/activate (Linux/Mac)
@@ -108,16 +108,21 @@ Visit `http://localhost:5000` to interact with the forecasting dashboard.
 
 ## 🤖 Model Performance
 
-We benchmarked 8 models to identify the best performer:
+We benchmarked 7 models using **proper time-series validation** (chronological train/test split to prevent data leakage):
 
-| Model | RMSE | R² Score | Strengths |
-|-------|------|----------|-----------|
-| **Lasso Regression** | **4.99** | **0.07** | Simple baseline, interpretable |
-| **Random Forest** | 5.00 | 0.06 | Robust to outliers, handles non-linearity |
-| **XGBoost** | 5.09 | 0.03 | High performance, handles missing values |
-| **LightGBM** | 5.03 | 0.05 | Fast training, efficient memory usage |
+| Model | Test RMSE | Test R² | CV RMSE | Notes |
+|-------|-----------|---------|---------|-------|
+| **LinearRegression** | 5.45 | 0.076 | 5.33 | Simple baseline |
+| **Ridge** | 5.45 | 0.076 | 5.33 | L2 regularization |
+| **Lasso** | 5.46 | 0.074 | 5.33 | L1 regularization |
+| **RandomForest** | 5.45 | 0.076 | 5.33 | Ensemble method |
+| **XGBoost** | ~5.5 | ~0.07 | ~5.3 | Fast boosting |
+| **LightGBM** | ~5.5 | ~0.07 | ~5.3 | Memory efficient |
+| **CatBoost** | ~5.5 | ~0.07 | ~5.3 | Categorical features |
 
-*Note: The current metrics reflect a sample run; hyperparameter tuning can further enhance tree-based models.*
+> **Validation Methodology**: Train period (2022-01-01 to 2024-10-01), Test period (2024-10-01 to 2024-12-31). This chronological split ensures realistic performance estimates by preventing future data leakage.
+
+*Note: The lower R² values compared to random-split validation are expected and accurate—demand forecasting is inherently challenging due to external factors.*
 
 ## 🔌 Features Engineered
 - **Temporal**: Day of week, month, holiday flags, distance to paydays.

@@ -85,7 +85,15 @@ def forecast():
         product_id = int(request.form.get("product_id", 1))
         horizon = int(request.form.get("horizon", 7))
         
-        # Validate inputs
+        # Validate store_id (config has 50 stores)
+        if store_id < 1 or store_id > 50:
+            return render_template("forecast.html", error="Invalid store ID. Must be between 1 and 50.")
+        
+        # Validate product_id (config has 1000 products)
+        if product_id < 1 or product_id > 1000:
+            return render_template("forecast.html", error="Invalid product ID. Must be between 1 and 1000.")
+        
+        # Validate horizon
         if horizon not in [7, 14, 30]:
             horizon = 7
         
@@ -131,6 +139,18 @@ def api_forecast(store_id: int, product_id: int, horizon: int):
     """
     try:
         start_time = time.time()
+        
+        # Validate store_id (config has 50 stores)
+        if store_id < 1 or store_id > 50:
+            return jsonify({
+                "error": "Invalid store ID. Must be between 1 and 50.",
+            }), 400
+        
+        # Validate product_id (config has 1000 products)
+        if product_id < 1 or product_id > 1000:
+            return jsonify({
+                "error": "Invalid product ID. Must be between 1 and 1000.",
+            }), 400
         
         # Validate horizon
         if horizon not in [7, 14, 30]:
@@ -266,7 +286,7 @@ def create_app():
 if __name__ == "__main__":
     host = api_config.get("host", "0.0.0.0")
     port = api_config.get("port", 5000)
-    debug = api_config.get("debug", True)
+    debug = api_config.get("debug", False)  # Default to False for security
     
     logger.info(f"Starting Flask API on {host}:{port}")
     app.run(host=host, port=port, debug=debug)

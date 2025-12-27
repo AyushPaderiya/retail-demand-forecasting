@@ -296,9 +296,16 @@ class FeatureEngineering:
             
             df = df.merge(promo_df, on=["date", "store_id", "product_id"], how="left")
         
-        # Fill NaN with no promotion
-        df["has_promotion"] = df.get("has_promotion", False).fillna(False)
-        df["promotion_discount"] = df.get("promotion_discount", 0).fillna(0)
+        # Fill NaN with no promotion (handle case where columns may not exist)
+        if "has_promotion" not in df.columns:
+            df["has_promotion"] = False
+        else:
+            df["has_promotion"] = df["has_promotion"].fillna(False)
+        
+        if "promotion_discount" not in df.columns:
+            df["promotion_discount"] = 0
+        else:
+            df["promotion_discount"] = df["promotion_discount"].fillna(0)
         
         return df
     

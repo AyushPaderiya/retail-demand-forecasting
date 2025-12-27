@@ -11,9 +11,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Lasso, LinearRegression, Ridge
-from sklearn.model_selection import cross_val_score, train_test_split
+from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
 from src.exception import ModelTrainingException
@@ -29,7 +29,7 @@ class ModelTrainerConfig:
     models_dir: str = "artifacts/models"
     test_size: float = 0.2
     random_state: int = 42
-    cv_folds: int = 5
+    cv_folds: int = 3  # Matches config.yaml
 
 
 class ModelTrainer:
@@ -38,7 +38,7 @@ class ModelTrainer:
     
     Models include:
     - Linear Regression, Ridge, Lasso
-    - Random Forest, Gradient Boosting
+    - Random Forest
     - XGBoost, LightGBM, CatBoost (when available)
     """
     
@@ -79,10 +79,14 @@ class ModelTrainer:
         target_col: str,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
-        Prepare data for training.
+        Prepare data for training using TIME-BASED split.
+        
+        Unlike random splitting, this method preserves temporal order to prevent
+        data leakage in time-series forecasting. The test set contains only
+        data from the most recent time period.
         
         Args:
-            df: Feature DataFrame.
+            df: Feature DataFrame (must contain 'date' column).
             feature_cols: List of feature column names.
             target_col: Target column name.
             
@@ -96,6 +100,16 @@ class ModelTrainer:
             
             if missing_features:
                 self.logger.warning(f"Missing features: {missing_features}")
+            
+            # CRITICAL: Sort by date for proper time-series split
+            if "date" in df.columns:
+                df = df.sort_values("date").reset_index(drop=True)
+                self.logger.info("Time-based split: Data sorted by date (no shuffle)")
+            else:
+                self.logger.warning(
+                    "No 'date' column found - using index order. "
+                    "Ensure data is pre-sorted chronologically!"
+                )
             
             X = df[available_features].copy()
             y = df[target_col].values
@@ -112,12 +126,26 @@ class ModelTrainer:
             # Handle NaN values
             X = X.fillna(0)
             
-            # Split data
-            X_train, X_test, y_train, y_test = train_test_split(
-                X.values, y,
-                test_size=self.test_size,
-                random_state=self.random_state
-            )
+            # TIME-BASED SPLIT: Use chronological order, no shuffling
+            # Last (test_size * 100)% of data becomes test set
+            n_samples = len(X)
+            split_idx = int(n_samples * (1 - self.test_size))
+            
+            X_train = X.values[:split_idx]
+            X_test = X.values[split_idx:]
+            y_train = y[:split_idx]
+            y_test = y[split_idx:]
+            
+            # Log date ranges if available
+            if "date" in df.columns:
+                train_dates = df["date"].iloc[:split_idx]
+                test_dates = df["date"].iloc[split_idx:]
+                self.logger.info(
+                    f"Train period: {train_dates.min()} to {train_dates.max()}"
+                )
+                self.logger.info(
+                    f"Test period:  {test_dates.min()} to {test_dates.max()}"
+                )
             
             # Scale features
             self.scaler = StandardScaler()
@@ -167,61 +195,74 @@ class ModelTrainer:
             "LinearRegression": LinearRegression(),
             "Ridge": Ridge(alpha=1.0, random_state=self.random_state),
             "Lasso": Lasso(alpha=0.1, random_state=self.random_state),
-            "RandomForest": RandomForestRegressor(
-                n_estimators=100,
-                max_depth=10,
-                random_state=self.random_state,
-                n_jobs=-1
-            ),
-            "GradientBoosting": GradientBoostingRegressor(
-                n_estimators=100,
-                max_depth=5,
-                random_state=self.random_state
-            ),
         }
+        
+        # Load model configs from config file
+        app_config = load_config()
+        model_configs = app_config.get("modeling", {}).get("models", [])
+        
+        # Add RandomForest with config params
+        rf_config = next((m for m in model_configs if m["name"] == "RandomForest"), {})
+        if rf_config.get("enabled", True):
+            rf_params = rf_config.get("params", {})
+            models["RandomForest"] = RandomForestRegressor(
+                n_estimators=rf_params.get("n_estimators", 50),
+                max_depth=rf_params.get("max_depth", 8),
+                min_samples_leaf=rf_params.get("min_samples_leaf", 5),
+                random_state=rf_params.get("random_state", self.random_state),
+                n_jobs=-1
+            )
         
         # Try to add XGBoost (GPU enabled if available)
         try:
             import xgboost as xgb
-            models["XGBoost"] = xgb.XGBRegressor(
-                n_estimators=200,
-                max_depth=8,
-                learning_rate=0.1,
-                random_state=self.random_state,
-                n_jobs=-1,
-                tree_method="hist",  # Fast histogram-based algorithm
-                device="cuda" if self._gpu_available() else "cpu",
-            )
+            xgb_config = next((m for m in model_configs if m["name"] == "XGBoost"), {})
+            if xgb_config.get("enabled", True):
+                xgb_params = xgb_config.get("params", {})
+                models["XGBoost"] = xgb.XGBRegressor(
+                    n_estimators=xgb_params.get("n_estimators", 100),
+                    max_depth=xgb_params.get("max_depth", 6),
+                    learning_rate=xgb_params.get("learning_rate", 0.1),
+                    random_state=xgb_params.get("random_state", self.random_state),
+                    n_jobs=-1,
+                    tree_method="hist",
+                    device="cuda" if self._gpu_available() else "cpu",
+                )
         except ImportError:
             self.logger.warning("XGBoost not available")
         
         # Try to add LightGBM (GPU enabled if available)
         try:
             import lightgbm as lgb
-            lgb_params = {
-                "n_estimators": 200,
-                "max_depth": 8,
-                "learning_rate": 0.1,
-                "random_state": self.random_state,
-                "n_jobs": -1,
-                "verbose": -1,
-            }
-            # LightGBM GPU requires special compilation
-            models["LightGBM"] = lgb.LGBMRegressor(**lgb_params)
+            lgb_config = next((m for m in model_configs if m["name"] == "LightGBM"), {})
+            if lgb_config.get("enabled", True):
+                lgb_cfg_params = lgb_config.get("params", {})
+                lgb_params = {
+                    "n_estimators": lgb_cfg_params.get("n_estimators", 100),
+                    "max_depth": lgb_cfg_params.get("max_depth", 6),
+                    "learning_rate": lgb_cfg_params.get("learning_rate", 0.1),
+                    "random_state": lgb_cfg_params.get("random_state", self.random_state),
+                    "n_jobs": -1,
+                    "verbose": -1,
+                }
+                models["LightGBM"] = lgb.LGBMRegressor(**lgb_params)
         except ImportError:
             self.logger.warning("LightGBM not available")
         
         # Try to add CatBoost (GPU enabled if available)
         try:
             from catboost import CatBoostRegressor
-            models["CatBoost"] = CatBoostRegressor(
-                iterations=200,
-                depth=8,
-                learning_rate=0.1,
-                random_state=self.random_state,
-                verbose=False,
-                task_type="GPU" if self._gpu_available() else "CPU",
-            )
+            cat_config = next((m for m in model_configs if m["name"] == "CatBoost"), {})
+            if cat_config.get("enabled", True):
+                cat_params = cat_config.get("params", {})
+                models["CatBoost"] = CatBoostRegressor(
+                    iterations=cat_params.get("iterations", 100),
+                    depth=cat_params.get("depth", 6),
+                    learning_rate=cat_params.get("learning_rate", 0.1),
+                    random_state=cat_params.get("random_state", self.random_state),
+                    verbose=cat_params.get("verbose", False),
+                    task_type="GPU" if self._gpu_available() else "CPU",
+                )
         except ImportError:
             self.logger.warning("CatBoost not available")
         
