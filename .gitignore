@@ -74,6 +74,9 @@ venv.bak/
 .DS_Store
 Thumbs.db
 
+# ML Training Artifacts
+catboost_info/
+
 # Project specific
 artifacts/data/*.csv
 artifacts/models/*.pkl
