@@ -10,14 +10,11 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional
 
-import pandas as pd
-
-from src.components.data_ingestion import DataIngestion, DataIngestionConfig
-from src.components.feature_engineering import FeatureEngineering, FeatureEngineeringConfig
-from src.components.model_trainer import ModelTrainer, ModelTrainerConfig
+from src.components.data_ingestion import DataIngestion
+from src.components.feature_engineering import FeatureEngineering
+from src.components.model_trainer import ModelTrainer
 from src.exception import CustomException
 from src.logger import get_logger
-from src.utils import load_config
 
 logger = get_logger(__name__)
 

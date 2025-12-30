@@ -5,8 +5,7 @@ Centralized configuration for synthetic data generation.
 """
 
 from dataclasses import dataclass, field
-from datetime import date
-from typing import List, Dict, Any
+from typing import List
 from pathlib import Path
 
 import yaml

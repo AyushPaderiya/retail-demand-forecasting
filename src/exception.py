@@ -2,11 +2,9 @@
 Custom Exception Classes
 
 Provides structured exception handling for the entire application.
-Inspired by: https://github.com/krishnaik06/mlproject
 """
 
 import sys
-from typing import Optional
 
 from src.logger import logger
 

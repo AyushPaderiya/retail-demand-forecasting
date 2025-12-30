@@ -2,11 +2,9 @@
 Centralized Logging Module
 
 Provides structured logging for the entire application with file and console output.
-Inspired by: https://github.com/krishnaik06/mlproject
 """
 
 import logging
-import os
 from datetime import datetime
 from pathlib import Path
 

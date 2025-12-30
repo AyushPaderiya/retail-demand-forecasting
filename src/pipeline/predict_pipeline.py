@@ -7,14 +7,14 @@ Pipeline for generating demand forecasts using trained models.
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
 
 from src.exception import PredictionException
 from src.logger import get_logger
-from src.utils import load_config, load_object
+from src.utils import load_object
 
 logger = get_logger(__name__)
 
